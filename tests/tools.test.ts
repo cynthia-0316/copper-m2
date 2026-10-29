@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   calculateCost,
   calculateCostInput,
@@ -98,7 +98,29 @@ describe("catalog tools", () => {
   });
 });
 
+// Today's stock, as the database holds it. The tests never touch Supabase.
+const stock = [
+  ["CH-POL", "Copper Home", "Polished Copper", 240, "2026-11-20"],
+  ["CH-TEA", "Copper Home", "Patina Teal", 6, "2026-11-06"],
+  ["CH-NSK", "Copper Home", "Night Sky", 185, "2026-11-20"],
+  ["CN-BRC", "Copper Notes", "Brushed Copper", 310, "2026-11-13"],
+  ["CN-DSA", "Copper Notes", "Desert Sand", 92, "2026-11-13"],
+  ["CN-NSK", "Copper Notes", "Night Sky", 0, "2026-11-14"],
+] as const;
+
 describe("check_availability", () => {
+  beforeEach(() => {
+    vi.spyOn(inventory, "readInventory").mockResolvedValue(
+      stock.map(([sku, product, color, units_in_stock, next_shipment]) => ({
+        sku,
+        product,
+        color,
+        units_in_stock,
+        next_shipment,
+      })),
+    );
+  });
+
   it("reports a backordered color with its restock date", async () => {
     const r = await checkAvailability({
       product: "copper-notes",

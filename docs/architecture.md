@@ -94,6 +94,7 @@ you handle them.
 |---|---|---|
 | Tools | `lib/copper/assistant/tools.ts` | `get_products`, `get_prices`, `calculate_cost`, `check_availability`, each with a zod input contract |
 | Data | `lib/copper/catalog.ts`, `lib/copper/inventory.ts` | Prices and colors from the catalog; stock read fresh from `readInventory()` on every call |
+| Database | Supabase `inventory` table (`supabase/migrations/`, `supabase/seed.sql`) | One row per product color. Readable by anyone with the publishable key, writable by nobody through the app; stock is edited in the Supabase Table Editor |
 
 **Data flow:** model picks a tool and sends input → zod contract validates it → tool reads catalog or stock → result goes back to the model.
 
