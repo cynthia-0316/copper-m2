@@ -26,6 +26,40 @@ const MAX_STEPS = 5;
 
 const APOLOGY = "Sorry, I couldn't answer that just now. Please try again.";
 
+// TEMP DIAGNOSTIC (remove after the diagnosis): logs only the error category,
+// HTTP status and a redacted, truncated message. Never the key, headers or
+// request. The key is described by yes/no facts only.
+function debugError(error: unknown) {
+  const redact = (text: unknown) =>
+    String(text ?? "")
+      .replace(/AIza[0-9A-Za-z_-]{10,}/g, "[redacted-key]")
+      .replace(/(key|token|authorization)(=|:)\s*\S+/gi, "$1$2[redacted]")
+      .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+      .slice(0, 400);
+  const e = (error ?? {}) as Record<string, unknown>;
+  let body: Record<string, unknown> = {};
+  try {
+    body = JSON.parse(String(e.responseBody ?? "{}")).error ?? {};
+  } catch {}
+  const key = process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? "";
+  console.error(
+    "[ask-copper-debug]",
+    JSON.stringify({
+      category: (e.name as string) ?? typeof error,
+      httpStatus: e.statusCode ?? null,
+      googleStatus: body.status ?? null,
+      googleCode: body.code ?? null,
+      retryable: e.isRetryable ?? null,
+      message: redact(body.message ?? e.message),
+      keyShape: {
+        present: key.length > 0,
+        startsWithAIza: key.startsWith("AIza"),
+        hasWhitespaceOrQuotes: /[\s"']/.test(key),
+      },
+    }),
+  );
+}
+
 export async function askCopper(
   request: AskCopperRequest,
 ): Promise<AskCopperResult> {
@@ -117,7 +151,8 @@ export async function askCopper(
       progress.status = "done";
       if (!progress.reply.trim()) progress.reply = APOLOGY;
       done(snapshot());
-    } catch {
+    } catch (error) {
+      debugError(error); // TEMP DIAGNOSTIC: remove after the diagnosis
       progress.status = "error";
       if (!progress.reply.trim()) progress.reply = APOLOGY;
       done(snapshot());
